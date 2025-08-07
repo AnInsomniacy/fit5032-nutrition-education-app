@@ -1,18 +1,18 @@
 <template>
-  <form @submit.prevent="handleSubmit" novalidate>
+  <form @submit.prevent="handleSubmit">
     <div class="mb-3">
-      <label for="email" class="form-label">Email Address</label>
+      <label for="username" class="form-label">Username</label>
       <input
-        id="email"
-        v-model="form.email"
-        type="email"
+        id="username"
+        v-model="form.username"
+        type="text"
         class="form-control"
-        :class="{ 'is-invalid': errors.email }"
-        placeholder="Enter your email"
-        @blur="validateEmail"
+        :class="{ 'is-invalid': errors.username }"
+        placeholder="Enter username"
+        required
       />
-      <div v-if="errors.email" class="invalid-feedback">
-        {{ errors.email }}
+      <div v-if="errors.username" class="invalid-feedback">
+        {{ errors.username }}
       </div>
     </div>
 
@@ -24,8 +24,8 @@
         type="password"
         class="form-control"
         :class="{ 'is-invalid': errors.password }"
-        placeholder="Enter your password (min 4 chars)"
-        @blur="validatePassword"
+        placeholder="Enter password"
+        required
       />
       <div v-if="errors.password" class="invalid-feedback">
         {{ errors.password }}
@@ -44,14 +44,14 @@
       </label>
     </div>
 
-    <div v-if="loginError" class="alert alert-danger" role="alert">
+    <div v-if="loginError" class="alert alert-danger">
       {{ loginError }}
     </div>
 
     <button
       type="submit"
       class="btn btn-primary w-100"
-      :disabled="isLoading || !isFormValid"
+      :disabled="isLoading || !isValid"
     >
       <span v-if="isLoading" class="spinner-border spinner-border-sm me-2"></span>
       {{ isLoading ? 'Signing In...' : 'Sign In' }}
@@ -64,14 +64,9 @@ import {reactive, ref, computed} from 'vue'
 import {useAuthStore} from '@/stores/auth'
 
 interface LoginForm {
-  email: string
+  username: string
   password: string
   rememberMe: boolean
-}
-
-interface ValidationErrors {
-  email?: string
-  password?: string
 }
 
 const emit = defineEmits<{
@@ -81,63 +76,44 @@ const emit = defineEmits<{
 const authStore = useAuthStore()
 
 const form = reactive<LoginForm>({
-  email: '',
+  username: '',
   password: '',
   rememberMe: false
 })
 
-const errors = reactive<ValidationErrors>({})
+const errors = reactive({
+  username: '',
+  password: ''
+})
+
 const isLoading = ref(false)
 const loginError = ref('')
 
-const isFormValid = computed(() => {
-  return form.email &&
-    form.password &&
-    !errors.email &&
-    !errors.password &&
-    form.email.length > 0 &&
-    form.password.length >= 4
+const isValid = computed(() => {
+  return form.username.length >= 2 && form.password.length >= 4
 })
 
-const validateEmail = () => {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-  if (!form.email) {
-    errors.email = 'Email is required'
-  } else if (!emailRegex.test(form.email)) {
-    errors.email = 'Please enter a valid email address'
-  } else {
-    delete errors.email
-  }
-}
-
-const validatePassword = () => {
-  if (!form.password) {
-    errors.password = 'Password is required'
-  } else if (form.password.length < 4) {
-    errors.password = 'Password must be at least 4 characters'
-  } else {
-    delete errors.password
-  }
+const validate = () => {
+  errors.username = form.username.length < 2 ? 'Username must be at least 2 characters' : ''
+  errors.password = form.password.length < 4 ? 'Password must be at least 4 characters' : ''
+  return !errors.username && !errors.password
 }
 
 const handleSubmit = async () => {
-  validateEmail()
-  validatePassword()
-
-  if (!isFormValid.value) return
+  if (!validate()) return
 
   isLoading.value = true
   loginError.value = ''
 
   try {
     await authStore.login({
-      email: form.email,
+      username: form.username,
       password: form.password,
       rememberMe: form.rememberMe
     })
     emit('login-success')
-  } catch (error) {
-    loginError.value = 'Invalid email or password. Please try again.'
+  } catch {
+    loginError.value = 'Invalid username or password'
   } finally {
     isLoading.value = false
   }
@@ -145,11 +121,6 @@ const handleSubmit = async () => {
 </script>
 
 <style scoped>
-.form-control:focus {
-  border-color: #28a745;
-  box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
-}
-
 .btn-primary {
   background-color: #28a745;
   border-color: #28a745;
@@ -158,5 +129,10 @@ const handleSubmit = async () => {
 .btn-primary:hover {
   background-color: #218838;
   border-color: #1e7e34;
+}
+
+.form-control:focus {
+  border-color: #28a745;
+  box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
 }
 </style>
